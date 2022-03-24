@@ -1,7 +1,7 @@
 var tasks = {};
 
 var createTask = function(taskText, taskDate, taskList) {
-  // create elements that make up a task item
+
   var taskLi = $("<li>").addClass("list-group-item");
   var taskSpan = $("<span>")
     .addClass("badge badge-primary badge-pill")
@@ -10,18 +10,20 @@ var createTask = function(taskText, taskDate, taskList) {
     .addClass("m-1")
     .text(taskText);
 
-  // append span and p element to parent li
+ 
   taskLi.append(taskSpan, taskP);
 
+ 
+  auditTask(taskLi);
 
-  // append to ul list on the page
+  
   $("#list-" + taskList).append(taskLi);
 };
 
 var loadTasks = function() {
   tasks = JSON.parse(localStorage.getItem("tasks"));
 
-  // if nothing in localStorage, create a new object to track all task status arrays
+  
   if (!tasks) {
     tasks = {
       toDo: [],
@@ -31,10 +33,9 @@ var loadTasks = function() {
     };
   }
 
-  // loop over object properties
+ 
   $.each(tasks, function(list, arr) {
-    console.log(list, arr);
-    // then loop over sub-array
+ 
     arr.forEach(function(task) {
       createTask(task.text, task.date, list);
     });
@@ -45,148 +46,132 @@ var saveTasks = function() {
   localStorage.setItem("tasks", JSON.stringify(tasks));
 };
 
-$(".list-group").on("click", "p", function() {
+var auditTask = function(taskEl) {
 
-  var text = $(this)
-  .text()
-  .trim();
 
-  var textInput = $("<textarea>").addClass("form-control").val(text);
-  $(this).replaceWith(textInput);
-
-  textInput.trigger("focus");
-});
-  $(".list-group").on("blur", "textarea", function() {
-    var text = $(this)
-    .val()
-    .trim()
-    var status = $(this)
-    .closest(".list-group")
-    .attr("id")
-    .replace("list-", " ");
-
-    var index = $(this)
-    .closest(".list-group-item")
-    .index();
-
-    var taskP = $("<p>")
-    .addClass("m-1")
-    .text(text);
-
-    $(this).replaceWith(taskP);
-
-  });
-
-  $(".list-group").on("click", "span", function(){
-    var date = $(this)
+  var date = $(taskEl)
+    .find("span")
     .text()
-    .trim()
-
-    var dateInput = $("<input>")
-    .attr("type", "text")
-    .addClass("form-control")
-    .val(date);
-
-    $(this).replaceWith(dateInput);
-
-    dateInput.trigger("focus")
-  });
-
-  $(".list-group").on("blur", "input[type='text]", function(){
-    var date = $(this)
-    .val()
     .trim();
 
-    var status = $(this) 
-    .closest(".list-group")
-    .attr("id")
-    .replace("list-", "");
+  console.log(date);
 
-    var index = $(this)
-    .closest(".list-group-item")
-    .index();
+  var time = moment(date, "L").set("hour", 17);
 
-    tasks[status][index].date = date;
-    saveTasks();
+  console.log(time);
 
-    var taskSpan = $("<span>")
-    .addClass("badge badge-primary badge-pill")
-    .text(date);
+ 
+  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
 
-    $(this).replaceWith(taskSpan);
-  });
+ 
+  if (moment().isAfter(time)) {
+    $(taskEl).addClass("list-group-item-danger");
+  } 
+  else if (Math.abs(moment().diff(time, "days")) <= 2) {
+    $(taskEl).addClass("list-group-item-warning");
+  }
+};
+
+
 $(".card .list-group").sortable({
+ 
   connectWith: $(".card .list-group"),
   scroll: false,
-  tolernace: "pointer",
+  tolerance: "pointer",
   helper: "clone",
-  activate: function(event) {
-    console.log("activate", this);
+  activate: function(event, ui) {
+    console.log(ui);
   },
-  deactivate: function(event) {
-    console.log("deactivate", this);
+  deactivate: function(event, ui) {
+    console.log(ui);
   },
   over: function(event) {
-    console.log("over", event.target);
+    console.log(event);
   },
   out: function(event) {
-    console.log("out", event.target);
+    console.log(event);
   },
-  update: function(event) {
+  update: function() {
     var tempArr = [];
-    $(this).children().each(function(){
-      
-      // var arrName = $(this)
-      // .attr("id")
-      // .replace("list-", "");
-      
-      // task[arrName] = tempArr;
-      // saveTasks();
 
-    var text = $(this)
-      .find("p")
-      .text()
-      .trim();
-    
-    var date = $(this)
-      .find("span")
-      .text()
-      .trim();
+  
+    $(this)
+      .children()
+      .each(function() {
+       
+        tempArr.push({
+          text: $(this)
+            .find("p")
+            .text()
+            .trim(),
+          date: $(this)
+            .find("span")
+            .text()
+            .trim()
+        });
+      });
 
-    tempArr.push({
-      text: text,
-      date: date
-    });
-    console.log(tempArr);  
-    });
+  
+    var arrName = $(this)
+      .attr("id")
+      .replace("list-", "");
+
+   
+    tasks[arrName] = tempArr;
+    saveTasks();
+  },
+  stop: function(event) {
+    $(this).removeClass("dropover");
   }
 });
 
-// modal was triggered
+
+$("#trash").droppable({
+  accept: ".card .list-group-item",
+  tolerance: "touch",
+  drop: function(event, ui) {
+   
+    ui.draggable.remove();
+  },
+  over: function(event, ui) {
+    console.log(ui);
+  },
+  out: function(event, ui) {
+    console.log(ui);
+  }
+});
+
+
+$("#modalDueDate").datepicker({
+  
+  minDate: 1
+});
+
+
 $("#task-form-modal").on("show.bs.modal", function() {
-  // clear values
+  
   $("#modalTaskDescription, #modalDueDate").val("");
 });
 
-// modal is fully visible
+
 $("#task-form-modal").on("shown.bs.modal", function() {
-  // highlight textarea
+  
   $("#modalTaskDescription").trigger("focus");
 });
 
-// save button in modal was clicked
+
 $("#task-form-modal .btn-primary").click(function() {
-  // get form values
+  
   var taskText = $("#modalTaskDescription").val();
   var taskDate = $("#modalDueDate").val();
 
   if (taskText && taskDate) {
     createTask(taskText, taskDate, "toDo");
 
-    // close modal
+   
     $("#task-form-modal").modal("hide");
 
-    // save in tasks array
+ 
     tasks.toDo.push({
       text: taskText,
       date: taskDate
@@ -196,31 +181,108 @@ $("#task-form-modal .btn-primary").click(function() {
   }
 });
 
-// remove all tasks
+
+$(".list-group").on("click", "p", function() {
+
+  var text = $(this)
+    .text()
+    .trim();
+
+  var textInput = $("<textarea>").addClass("form-control").val(text);
+  $(this).replaceWith(textInput);
+
+ 
+  textInput.trigger("focus");
+});
+
+
+$(".list-group").on("blur", "textarea", function() {
+ 
+  var text = $(this).val();
+
+
+  var status = $(this)
+    .closest(".list-group")
+    .attr("id")
+    .replace("list-", "");
+  var index = $(this)
+    .closest(".list-group-item")
+    .index();
+
+  
+  tasks[status][index].text = text;
+  saveTasks();
+
+ 
+  var taskP = $("<p>")
+    .addClass("m-1")
+    .text(text);
+
+
+  $(this).replaceWith(taskP);
+});
+
+
+$(".list-group").on("click", "span", function() {
+  // get current text
+  var date = $(this)
+    .text()
+    .trim();
+
+
+  var dateInput = $("<input>")
+    .attr("type", "text")
+    .addClass("form-control")
+    .val(date);
+  $(this).replaceWith(dateInput);
+
+  
+  dateInput.datepicker({
+    minDate: 1,
+    onClose: function() {
+  
+      $(this).trigger("change");
+    }
+  });
+
+
+  dateInput.trigger("focus");
+});
+
+
+$(".list-group").on("change", "input[type='text']", function() {
+  var date = $(this).val();
+
+
+  var status = $(this)
+    .closest(".list-group")
+    .attr("id")
+    .replace("list-", "");
+  var index = $(this)
+    .closest(".list-group-item")
+    .index();
+
+
+  tasks[status][index].date = date;
+  saveTasks();
+
+ 
+  var taskSpan = $("<span>")
+    .addClass("badge badge-primary badge-pill")
+    .text(date);
+    $(this).replaceWith(taskSpan);
+    auditTask($(taskSpan).closest(".list-group-item"));
+});
+
+
 $("#remove-tasks").on("click", function() {
   for (var key in tasks) {
     tasks[key].length = 0;
     $("#list-" + key).empty();
   }
+  console.log(tasks);
   saveTasks();
 });
 
-$("#trash").droppable({
-  accept: ".card .list-group-item",
-  tolernace: "touch",
-  drop: function(event, ui) {
-    ui.draggable.remove();
-    console.log("drop");
-  },
-  over: function(event, ui) {
-    console.log("over");
-  },
-  out: function(event, ui) {
-    console.log("out");
-  }
-});
 
-// load tasks for the first time
 loadTasks();
-
-
